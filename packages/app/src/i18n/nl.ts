@@ -1168,4 +1168,16 @@ export const dict = {
   "workspace.reset.archived.many": "{{count}} sessies worden gearchiveerd.",
   "workspace.reset.note":
     "Hierdoor wordt de werkruimte opnieuw ingesteld zodat deze overeenkomt met de standaardbranch.",
+  "settings.plugins.title": "Plugins",
+  "settings.plugins.section.installed": "Installed",
+  "settings.plugins.section.browse": "Browse",
+  "settings.plugins.installed.empty": "No plugins installed",
+  "settings.plugins.installed.toast.title": "Plugin installed",
+  "settings.plugins.installed.toast.description": "{{plugin}} was added to your global configuration.",
+  "settings.plugins.search.placeholder": "Search plugins",
+  "settings.plugins.search.empty": "No plugins found",
+  "settings.plugins.search.error": "Could not load plugins from npm",
+  "settings.plugins.install": "Install",
+  "settings.plugins.local": "Local",
+  "settings.plugins.description": "Plugins extend the server and the terminal UI. Widgets and commands appear in the terminal, not in this app.",
 }

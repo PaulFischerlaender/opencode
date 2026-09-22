@@ -1245,4 +1245,16 @@ export const dict = {
   "help.tabs.persistence": "Dine faner er stadig åbne, når du åbner appen igen.",
   "help.tabs.worktrees":
     "Det nye design understøtter endnu ikke Git Worktrees, men understøttelsen kommer snart. Hvis du foretrækker at fortsætte med det tidligere layout, kan du skifte mellem layoutene under Indstillinger. Bemærk, at det nye layout bliver permanent om nogle få uger.",
+  "settings.plugins.title": "Plugins",
+  "settings.plugins.section.installed": "Installed",
+  "settings.plugins.section.browse": "Browse",
+  "settings.plugins.installed.empty": "No plugins installed",
+  "settings.plugins.installed.toast.title": "Plugin installed",
+  "settings.plugins.installed.toast.description": "{{plugin}} was added to your global configuration.",
+  "settings.plugins.search.placeholder": "Search plugins",
+  "settings.plugins.search.empty": "No plugins found",
+  "settings.plugins.search.error": "Could not load plugins from npm",
+  "settings.plugins.install": "Install",
+  "settings.plugins.local": "Local",
+  "settings.plugins.description": "Plugins extend the server and the terminal UI. Widgets and commands appear in the terminal, not in this app.",
 }

@@ -727,3 +727,110 @@
   line-height: 1;
   color: var(--v2-state-fg-danger);
 }
+
+.settings-v2-tab-body.settings-v2-plugins {
+  gap: 32px;
+}
+
+.settings-v2-tab-header.settings-v2-plugins-header {
+  gap: 24px;
+  padding-bottom: 24px;
+}
+
+.settings-v2-plugins .settings-v2-section-title {
+  padding-bottom: 0;
+  font-size: 13px;
+  font-weight: 530;
+  line-height: 1;
+}
+
+.settings-v2-plugins .settings-v2-section-title + [data-component="settings-v2-list"] {
+  margin-top: 16px;
+}
+
+.settings-v2-plugins [data-component="settings-v2-list"] {
+  padding: 20px;
+  border-radius: 6px;
+}
+
+.settings-v2-plugins-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 16px;
+  border-bottom: 0.5px solid var(--v2-border-border-base);
+}
+
+.settings-v2-plugins-row:last-child {
+  border-bottom: none;
+}
+
+@media (min-width: 640px) {
+  .settings-v2-plugins-row {
+    flex-wrap: nowrap;
+  }
+}
+
+.settings-v2-plugins-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-v2-plugins-main {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-v2-plugins-name {
+  font-size: 13px;
+  font-weight: 530;
+  line-height: 16px;
+  color: var(--v2-text-text-base);
+  overflow-wrap: anywhere;
+}
+
+.settings-v2-plugins-link {
+  cursor: pointer;
+  text-align: start;
+}
+
+.settings-v2-plugins-link:hover {
+  text-decoration: underline;
+}
+
+.settings-v2-plugins-description {
+  margin-block: -3.5px;
+  font-size: 13px;
+  font-weight: 440;
+  line-height: 20px;
+  color: var(--v2-text-text-muted);
+}
+
+.settings-v2-plugins-meta {
+  font-size: 13px;
+  font-weight: 440;
+  line-height: 1;
+  color: var(--v2-text-text-muted);
+}
+
+.settings-v2-plugins-empty {
+  padding-block: 20px;
+  font-size: 13px;
+  font-weight: 440;
+  line-height: 1;
+  color: var(--v2-text-text-muted);
+}
+
+.settings-v2-plugins-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

@@ -1182,4 +1182,16 @@ export const dict = {
   "help.tabs.persistence": "Wenn Sie die App erneut öffnen, sind Ihre Tabs weiterhin geöffnet.",
   "help.tabs.worktrees":
     "Das neue Design unterstützt Git-Worktrees noch nicht. Diese Funktion folgt in Kürze. Wenn Sie das bisherige Layout vorerst weiterverwenden möchten, können Sie in den Einstellungen zwischen den Layouts wechseln. Beachten Sie jedoch, dass das neue Layout in einigen Wochen dauerhaft verwendet wird.",
+  "settings.plugins.title": "Plugins",
+  "settings.plugins.section.installed": "Installed",
+  "settings.plugins.section.browse": "Browse",
+  "settings.plugins.installed.empty": "No plugins installed",
+  "settings.plugins.installed.toast.title": "Plugin installed",
+  "settings.plugins.installed.toast.description": "{{plugin}} was added to your global configuration.",
+  "settings.plugins.search.placeholder": "Search plugins",
+  "settings.plugins.search.empty": "No plugins found",
+  "settings.plugins.search.error": "Could not load plugins from npm",
+  "settings.plugins.install": "Install",
+  "settings.plugins.local": "Local",
+  "settings.plugins.description": "Plugins extend the server and the terminal UI. Widgets and commands appear in the terminal, not in this app.",
 } satisfies Partial<Record<Keys, string>>
