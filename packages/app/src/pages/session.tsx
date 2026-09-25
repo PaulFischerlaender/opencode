@@ -40,6 +40,7 @@ import { showToast } from "@/utils/toast"
 import { base64Encode, checksum } from "@opencode-ai/core/util/encode"
 import { useLocation, useNavigate, useParams, useSearchParams } from "@solidjs/router"
 import { NewSessionView, SessionHeader } from "@/components/session"
+import { PluginSlot } from "@/components/plugin-slot"
 import { ErrorPage } from "@/pages/error"
 import { CommentsProvider, useComments } from "@/context/comments"
 import { useCommand } from "@/context/command"
@@ -2063,6 +2064,9 @@ export default function Page() {
       {sessionSync() ?? ""}
       <Show when={!isDesktop() && !!params.id && settings.general.newLayoutDesigns() && !mobileTabsBottom()}>
         {mobileTabs(true)}
+      </Show>
+      <Show when={!!params.id}>
+        <PluginSlot name="session.header" class="shrink-0 px-3 pt-3" />
       </Show>
       <div class="flex-1 min-h-0 overflow-hidden">
         <Switch>

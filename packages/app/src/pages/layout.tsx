@@ -57,6 +57,7 @@ import { DebugBar } from "@/components/debug-bar"
 import { TabsInfoPopup } from "@/components/help-button"
 import { Titlebar, type TitlebarUpdate } from "@/components/titlebar"
 import { useDirectoryPicker } from "@/components/directory-picker"
+import { PluginSlot } from "@/components/plugin-slot"
 import { ServerConnection, useServer } from "@/context/server"
 import { useLanguage, type Locale } from "@/context/language"
 import { pathKey } from "@/utils/path-key"
@@ -2183,6 +2184,8 @@ export default function LegacyLayout(props: ParentProps) {
             </>
           )}
         </Show>
+
+        <PluginSlot name="sidebar.footer" class="shrink-0 px-3 py-3" />
 
         <div
           class="shrink-0 px-3 py-3"

@@ -7,6 +7,7 @@ import type {
   WorkspaceAdapter as PluginWorkspaceAdapter,
 } from "@opencode-ai/plugin"
 import { Config } from "@/config/config"
+import { ConfigPlugin } from "@/config/plugin"
 import { createOpencodeClient } from "@opencode-ai/sdk"
 import { ServerAuth } from "@/server/auth"
 import { CodexAuthPlugin } from "./openai/codex"
@@ -27,6 +28,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { errorMessage } from "@/util/error"
 import { PluginLoader } from "./loader"
+import { PluginUi } from "./ui"
 import { parsePluginSpecifier, readPluginId, readV1Plugin, resolvePluginId } from "./shared"
 import { registerAdapter } from "@/control-plane/adapters"
 import type { WorkspaceAdapter } from "@/control-plane/types"
@@ -111,16 +113,21 @@ function getLegacyPlugins(mod: Record<string, unknown>) {
   return result
 }
 
-async function applyPlugin(load: PluginLoader.Loaded, input: PluginInput, hooks: Hooks[]) {
+async function applyPlugin(
+  load: PluginLoader.Loaded,
+  input: PluginInput,
+  hooks: Hooks[],
+  ui: (id: string) => PluginInput["ui"],
+) {
   const plugin = readV1Plugin(load.mod, load.spec, "server", "detect")
   if (plugin) {
-    await resolvePluginId(load.source, load.spec, load.target, readPluginId(plugin.id, load.spec), load.pkg)
-    hooks.push(await (plugin as PluginModule).server(input, load.options))
+    const id = await resolvePluginId(load.source, load.spec, load.target, readPluginId(plugin.id, load.spec), load.pkg)
+    hooks.push(await (plugin as PluginModule).server({ ...input, ui: ui(id) }, load.options))
     return
   }
 
   for (const server of getLegacyPlugins(load.mod)) {
-    hooks.push(await server(input, load.options))
+    hooks.push(await server({ ...input, ui: ui(readPluginId(undefined, load.spec) ?? load.spec) }, load.options))
   }
 }
 
@@ -130,14 +137,51 @@ const layer = Layer.effect(
     const events = yield* EventV2Bridge.Service
     const config = yield* Config.Service
     const flags = yield* RuntimeFlags.Service
+    const pluginUi = yield* PluginUi.Service
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("Plugin.state")(function* (ctx) {
         const hooks: Hooks[] = []
         const bridge = yield* EffectBridge.make()
 
+        // Widgets are published from plugin code that runs outside the Effect
+        // runtime, so re-enter through the bridge like other plugin callbacks.
+        const uiHandles = new Map<string, PluginInput["ui"]>()
+        function uiHandle(id: string) {
+          const existing = uiHandles.get(id)
+          if (existing) return existing
+          const handle: PluginInput["ui"] = {
+            publish(widget) {
+              bridge.fork(
+                pluginUi
+                  .publish({ plugin: id, slot: widget.slot, widget: { title: widget.title, rows: widget.rows } })
+                  .pipe(Effect.tapError((error) => Effect.logError("plugin ui publish failed", { id, error }))),
+              )
+            },
+            clear(slot) {
+              bridge.fork(
+                pluginUi
+                  .clear({ plugin: id, slot })
+                  .pipe(Effect.tapError((error) => Effect.logError("plugin ui clear failed", { id, error }))),
+              )
+            },
+          }
+          uiHandles.set(id, handle)
+          return handle
+        }
+
         function publishPluginError(message: string) {
           bridge.fork(events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() }))
+        }
+
+        // Load failures run outside the Effect runtime, so re-enter through the
+        // bridge to record them for the plugin drawer.
+        function reportPluginError(plugin: string, message: string) {
+          bridge.fork(
+            pluginUi
+              .report({ plugin, message })
+              .pipe(Effect.tapError((error) => Effect.logError("plugin ui error report failed", { plugin, error }))),
+          )
         }
 
         const { Server } = yield* Effect.promise(() => import("../server/server"))
@@ -181,6 +225,9 @@ const layer = Layer.effect(
         const plugins = flags.pure ? [] : (cfg.plugin_origins ?? [])
         if (flags.pure && cfg.plugin_origins?.length) {
         }
+        // A rebuild re-derives errors from the current config, so anything that
+        // is no longer configured stops showing up in the drawer.
+        yield* pluginUi.retainErrors(plugins.map((origin) => ConfigPlugin.pluginSpecifier(origin.spec)))
         if (plugins.length) yield* config.waitForDependencies()
 
         const loaded = yield* Effect.promise(() =>
@@ -194,24 +241,18 @@ const layer = Layer.effect(
                 const spec = candidate.plan.spec
                 const cause = error instanceof Error ? (error.cause ?? error) : error
                 const message = stage === "load" ? errorMessage(error) : errorMessage(cause)
+                const detail =
+                  stage === "install"
+                    ? (() => {
+                        const parsed = parsePluginSpecifier(spec)
+                        return `Failed to install plugin ${parsed.pkg}@${parsed.version}: ${message}`
+                      })()
+                    : stage === "compatibility"
+                      ? `Plugin ${spec} skipped: ${message}`
+                      : `Failed to load plugin ${spec}: ${message}`
 
-                if (stage === "install") {
-                  const parsed = parsePluginSpecifier(spec)
-                  publishPluginError(`Failed to install plugin ${parsed.pkg}@${parsed.version}: ${message}`)
-                  return
-                }
-
-                if (stage === "compatibility") {
-                  publishPluginError(`Plugin ${spec} skipped: ${message}`)
-                  return
-                }
-
-                if (stage === "entry") {
-                  publishPluginError(`Failed to load plugin ${spec}: ${message}`)
-                  return
-                }
-
-                publishPluginError(`Failed to load plugin ${spec}: ${message}`)
+                publishPluginError(detail)
+                reportPluginError(spec, detail)
               },
             },
           }),
@@ -222,22 +263,16 @@ const layer = Layer.effect(
           // Keep plugin execution sequential so hook registration and execution
           // order remains deterministic across plugin runs.
           yield* Effect.tryPromise({
-            try: () => applyPlugin(load, input, hooks),
+            try: () => applyPlugin(load, input, hooks, uiHandle),
             catch: (err) => {
               const message = errorMessage(err)
               return message
             },
           }).pipe(
+            Effect.tap(() => pluginUi.clearError({ plugin: load.spec })),
             Effect.tapError((error) => Effect.logError("failed to load plugin", { path: load.spec, error })),
-            Effect.catch(() => {
-              // TODO: make proper events for this
-              // events.publish(Session.Event.Error, {
-              //   error: new NamedError.Unknown({
-              //     message: `Failed to load plugin ${load.spec}: ${message}`,
-              //   }).toObject(),
-              // })
-              return Effect.void
-            }),
+            Effect.tapError((error) => pluginUi.report({ plugin: load.spec, message: error })),
+            Effect.catch(() => Effect.void),
           )
         }
 
@@ -271,6 +306,18 @@ const layer = Layer.effect(
                 catch: errorMessage,
               }).pipe(
                 Effect.tapError((error) => Effect.logError("plugin dispose hook failed", { error })),
+                Effect.ignore,
+              ),
+            { discard: true },
+          ),
+        )
+
+        yield* Effect.addFinalizer(() =>
+          Effect.forEach(
+            [...uiHandles.keys()],
+            (id) =>
+              pluginUi.clear({ plugin: id }).pipe(
+                Effect.tapError((error) => Effect.logError("plugin ui cleanup failed", { id, error })),
                 Effect.ignore,
               ),
             { discard: true },
@@ -312,7 +359,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [EventV2Bridge.node, Config.node, RuntimeFlags.node],
+  deps: [EventV2Bridge.node, Config.node, RuntimeFlags.node, PluginUi.node],
 })
 
 export * as Plugin from "."

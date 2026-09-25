@@ -2,6 +2,7 @@ import type {
   Config,
   OpencodeClient,
   Path,
+  PluginUiWidget,
   Project,
   ProviderAuthResponse,
   SessionStatus,
@@ -202,6 +203,21 @@ function makeQueryOptionsApi(
 }
 export type QueryOptionsApi = ReturnType<typeof makeQueryOptionsApi>
 
+export type PluginUiEntry = {
+  slot: string
+  plugin: string
+  widget: PluginUiWidget
+}
+
+export type PluginUiError = {
+  plugin: string
+  message: string
+}
+
+function pluginUiKey(plugin: string, slot: string) {
+  return `${plugin}\u0000${slot}`
+}
+
 export function createServerSyncContextInner(serverSDK: ServerSDK) {
   const language = useLanguage()
   const owner = getOwner()
@@ -262,6 +278,11 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
       },
     }),
   )
+
+  const [pluginUi, setPluginUi] = createStore<{
+    widgets: Record<string, PluginUiEntry>
+    errors: Record<string, PluginUiError>
+  }>({ widgets: {}, errors: {} })
 
   const [globalStore, setGlobalStore] = createStore<GlobalStore>({
     get ready() {
@@ -535,6 +556,43 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
     const eventType: string = event.type
     const recent = bootingRoot || Date.now() - bootedAt < 1500
 
+    // The server replays its published widgets right after `server.connected`,
+    // so resetting here drops anything cleared while this client was away.
+    if (eventType === "server.connected") {
+      setPluginUi("widgets", {})
+      setPluginUi("errors", {})
+    }
+    if (event.type === "plugin.ui.updated") {
+      const widgetKey = pluginUiKey(event.properties.plugin, event.properties.slot)
+      setPluginUi("widgets", widgetKey, {
+        slot: event.properties.slot,
+        plugin: event.properties.plugin,
+        widget: event.properties.widget,
+      })
+    }
+    if (event.type === "plugin.ui.cleared") {
+      const widgetKey = pluginUiKey(event.properties.plugin, event.properties.slot)
+      setPluginUi(
+        "widgets",
+        produce((widgets) => {
+          delete widgets[widgetKey]
+        }),
+      )
+    }
+    if (event.type === "plugin.ui.error") {
+      const plugin = event.properties.plugin
+      if (event.properties.message === undefined) {
+        setPluginUi(
+          "errors",
+          produce((errors) => {
+            delete errors[plugin]
+          }),
+        )
+      } else {
+        setPluginUi("errors", plugin, { plugin, message: event.properties.message })
+      }
+    }
+
     if (event.current) session.applyV2(event.current)
     session.apply(event)
     if (event.type === "session.created" || event.type === "session.updated" || event.type === "session.deleted") {
@@ -686,6 +744,11 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
     refreshProviders,
     // bootstrap,
     updateConfig: updateConfigMutation.mutateAsync,
+    pluginUi: {
+      all: () => Object.values(pluginUi.widgets),
+      slot: (slot: string) => Object.values(pluginUi.widgets).filter((entry) => entry.slot === slot),
+      errors: () => Object.values(pluginUi.errors),
+    },
     project: projectApi,
     session,
     homeSessions,

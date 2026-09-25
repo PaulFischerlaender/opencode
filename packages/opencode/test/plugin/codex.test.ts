@@ -440,6 +440,7 @@ describe("plugin.codex", () => {
         experimental_workspace: {
           register() {},
         },
+        ui: { publish() {}, clear() {} },
         serverUrl: new URL("https://example.com"),
         $: {} as never,
       },

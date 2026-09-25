@@ -53,6 +53,34 @@ export type WorkspaceAdapter = {
   target(config: WorkspaceInfo): WorkspaceTarget | Promise<WorkspaceTarget>
 }
 
+export type PluginUiRow =
+  | {
+      type: "text"
+      text: string
+      tone?: "base" | "muted" | "success" | "warning" | "danger"
+    }
+  | {
+      type: "progress"
+      label: string
+      percent: number
+      detail?: string
+    }
+  | {
+      type: "link"
+      label: string
+      href: string
+    }
+
+export type PluginUiWidget = {
+  title?: string
+  rows: PluginUiRow[]
+}
+
+export type PluginUiInput = PluginUiWidget & {
+  /** Host slot to render into. Known slots: `sidebar.footer` (home column), `session.header` (above the chat). */
+  slot: string
+}
+
 export type PluginInput = {
   client: ReturnType<typeof createOpencodeClient>
   project: Project
@@ -60,6 +88,15 @@ export type PluginInput = {
   worktree: string
   experimental_workspace: {
     register(type: string, adapter: WorkspaceAdapter): void
+  }
+  /**
+   * Publish declarative widgets into host UI slots. Widgets render in the
+   * desktop and web apps; the terminal TUI renders its own plugin slots.
+   * The host clears a plugin's widgets when the plugin is disposed.
+   */
+  ui: {
+    publish(widget: PluginUiInput): void
+    clear(slot?: string): void
   }
   serverUrl: URL
   $: BunShell

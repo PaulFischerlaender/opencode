@@ -4,6 +4,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Installation } from "@/installation"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
+import { PluginUi } from "@/plugin/ui"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Effect, Queue } from "effect"
 import * as Stream from "effect/Stream"
@@ -22,7 +23,7 @@ function eventData(data: unknown): Sse.Event {
   }
 }
 
-function eventResponse() {
+function eventResponse(widgets: PluginUi.Entry[], errors: PluginUi.ErrorEntry[]) {
   return Effect.gen(function* () {
     yield* Effect.logInfo("global event connected")
     const events = Stream.callback<GlobalBusEvent>((queue) => {
@@ -37,8 +38,31 @@ function eventResponse() {
       Stream.map(() => ({ payload: { id: EventV2.ID.create(), type: "server.heartbeat", properties: {} } })),
     )
 
+    // Replay published plugin widgets so a client that connects after a plugin
+    // published still renders them without waiting for the next update.
+    const replay = widgets.map((entry) => ({
+      payload: {
+        id: EventV2.ID.create(),
+        type: "plugin.ui.updated",
+        properties: { slot: entry.slot, plugin: entry.plugin, widget: entry.widget },
+      },
+    }))
+
+    // Replay load failures too, so a client that reconnects still sees them.
+    const replayErrors = errors.map((entry) => ({
+      payload: {
+        id: EventV2.ID.create(),
+        type: "plugin.ui.error",
+        properties: { plugin: entry.plugin, message: entry.message },
+      },
+    }))
+
     return HttpServerResponse.stream(
-      Stream.make({ payload: { id: EventV2.ID.create(), type: "server.connected", properties: {} } }).pipe(
+      Stream.make(
+        { payload: { id: EventV2.ID.create(), type: "server.connected", properties: {} } },
+        ...replay,
+        ...replayErrors,
+      ).pipe(
         Stream.concat(events.pipe(Stream.merge(heartbeat, { haltStrategy: "left" }))),
         Stream.map(eventData),
         Stream.pipeThroughChannel(Sse.encode()),
@@ -61,6 +85,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
   Effect.gen(function* () {
     const config = yield* Config.Service
     const installation = yield* Installation.Service
+    const pluginUi = yield* PluginUi.Service
     const bridge = yield* EffectBridge.make()
 
     const health = Effect.fn("GlobalHttpApi.health")(function* () {
@@ -68,7 +93,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
     })
 
     const event = Effect.fn("GlobalHttpApi.event")(function* () {
-      return yield* eventResponse()
+      return yield* eventResponse(yield* pluginUi.list(), yield* pluginUi.errors())
     })
 
     const configGet = Effect.fn("GlobalHttpApi.configGet")(function* () {

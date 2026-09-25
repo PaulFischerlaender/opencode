@@ -10,6 +10,7 @@ async function hook() {
     project: {} as never,
     worktree: "",
     experimental_workspace: { register() {} },
+    ui: { publish() {}, clear() {} },
     serverUrl: new URL("http://localhost"),
     $: {} as never,
     client: {

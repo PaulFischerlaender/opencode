@@ -58,6 +58,9 @@ export type Event =
   | EventPermissionV2Asked
   | EventPermissionV2Replied
   | EventPluginAdded
+  | EventPluginUiUpdated
+  | EventPluginUiCleared
+  | EventPluginUiError
   | EventProjectDirectoriesUpdated
   | EventFileWatcherUpdated
   | EventPtyCreated
@@ -1282,6 +1285,31 @@ export type GlobalEvent = {
         type: "plugin.added"
         properties: {
           id: string
+        }
+      }
+    | {
+        id: string
+        type: "plugin.ui.updated"
+        properties: {
+          slot: string
+          plugin: string
+          widget: PluginUiWidget
+        }
+      }
+    | {
+        id: string
+        type: "plugin.ui.cleared"
+        properties: {
+          slot: string
+          plugin: string
+        }
+      }
+    | {
+        id: string
+        type: "plugin.ui.error"
+        properties: {
+          plugin: string
+          message?: string
         }
       }
     | {
@@ -2909,6 +2937,9 @@ export type V2Event =
   | PermissionV2Asked
   | PermissionV2Replied
   | PluginAdded
+  | PluginUiUpdated
+  | PluginUiCleared
+  | PluginUiError
   | ProjectDirectoriesUpdated
   | FileWatcherUpdated
   | PtyCreated
@@ -3129,6 +3160,31 @@ export type PermissionV2Source = {
 }
 
 export type PermissionV2Reply = "once" | "always" | "reject"
+
+export type PluginUiTone = "base" | "muted" | "success" | "warning" | "danger"
+
+export type PluginUiRow =
+  | {
+      type: "text"
+      text: string
+      tone?: PluginUiTone
+    }
+  | {
+      type: "progress"
+      label: string
+      percent: number
+      detail?: string
+    }
+  | {
+      type: "link"
+      label: string
+      href: string
+    }
+
+export type PluginUiWidget = {
+  title?: string
+  rows: Array<PluginUiRow>
+}
 
 export type QuestionV2Option = {
   /**
@@ -5497,6 +5553,61 @@ export type PluginAdded = {
   }
 }
 
+export type PluginUiUpdated = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "plugin.ui.updated"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    slot: string
+    plugin: string
+    widget: PluginUiWidget
+  }
+}
+
+export type PluginUiCleared = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "plugin.ui.cleared"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    slot: string
+    plugin: string
+  }
+}
+
+export type PluginUiError = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "plugin.ui.error"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    plugin: string
+    message?: string
+  }
+}
+
 export type ProjectDirectoriesUpdated = {
   id: string
   metadata?: {
@@ -6756,6 +6867,34 @@ export type EventPluginAdded = {
   type: "plugin.added"
   properties: {
     id: string
+  }
+}
+
+export type EventPluginUiUpdated = {
+  id: string
+  type: "plugin.ui.updated"
+  properties: {
+    slot: string
+    plugin: string
+    widget: PluginUiWidget
+  }
+}
+
+export type EventPluginUiCleared = {
+  id: string
+  type: "plugin.ui.cleared"
+  properties: {
+    slot: string
+    plugin: string
+  }
+}
+
+export type EventPluginUiError = {
+  id: string
+  type: "plugin.ui.error"
+  properties: {
+    plugin: string
+    message?: string
   }
 }
 

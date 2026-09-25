@@ -834,3 +834,34 @@
   flex-direction: column;
   gap: 8px;
 }
+
+.settings-v2-plugins-spec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.settings-v2-plugins-spec [data-component="text-input-v2"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-v2-plugins-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-v2-plugins-toolbar .settings-v2-tab-search {
+  flex: 1;
+  min-width: 220px;
+  width: auto;
+}
+
+.settings-v2-plugins-more {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}

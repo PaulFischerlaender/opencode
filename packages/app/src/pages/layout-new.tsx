@@ -3,12 +3,15 @@ import { createStore } from "solid-js/store"
 import { DebugBar } from "@/components/debug-bar"
 import { TabsInfoPopup } from "@/components/help-button"
 import { Titlebar, type TitlebarUpdate } from "@/components/titlebar"
+import { PluginDrawer, PluginDrawerToggle } from "@/components/plugin-drawer"
 import { usePlatform } from "@/context/platform"
+import { Persist, persisted } from "@/utils/persist"
 import { setV2Toast, ToastRegion } from "@/utils/toast"
 
 export default function NewLayout(props: ParentProps) {
   const platform = usePlatform()
   const [state, setState] = createStore({ debugTools: true })
+  const [drawer, setDrawer] = persisted(Persist.global("plugin-drawer"), createStore({ open: false }))
 
   createEffect(() => setV2Toast(true))
 
@@ -38,8 +41,10 @@ export default function NewLayout(props: ParentProps) {
             : undefined
         }
       />
-      <main class="flex-1 min-h-0 min-w-0 overflow-x-hidden flex flex-col items-start contain-strict">
+      <PluginDrawerToggle open={drawer.open} onToggle={() => setDrawer("open", (value) => !value)} />
+      <main class="relative flex-1 min-h-0 min-w-0 overflow-x-hidden flex flex-col items-start contain-strict">
         <Suspense>{props.children}</Suspense>
+        <PluginDrawer open={drawer.open} onClose={() => setDrawer("open", false)} />
       </main>
       {import.meta.env.DEV && state.debugTools && <DebugBar inline />}
       <TabsInfoPopup />
